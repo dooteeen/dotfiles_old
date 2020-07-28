@@ -1,0 +1,20 @@
+unstage = Reset 'git add' for tracked file.
+untrack = Reset 'git add' for untracked file.
+discard = Rollback file with 'git checkout'.
+timeleap = Go back one commit and Delete all edited.
+wrap = Commit force with same message.
+uncommit = Make no commit.
+make-branch = Make new branch.
+rename-branch = Rename branch.
+delete-branch = Delete branch.
+tags = Show all tags.
+prestage-diff = Show unstaged files diff.
+precommit-diff = Show staged files diff.
+remotes = Show all remotes.
+unmerged = Show unmerged branches.
+load-stash = Load stash and remove from stash-list.
+save-stash = Save stash.
+check-stash = Load stash without removing.
+delete-stash = Remove stash from list.
+
+

@@ -1,0 +1,173 @@
+# vim: set ft=gitconfig :
+[alias]
+    amend    = commit --amend
+    branches = branch -a
+    gconf    = config --global
+    irebase  = rebase -i
+    last     = log -1 --pretty=medium
+    list     = status --short
+    pick     = cherry-pick
+    remotes  = remote -v
+    root     = rev-parse --show-toplevel
+    wrap     = commit --amend --no-edit
+    tags     = tag
+
+    back     = checkout "-"
+    discard  = checkout --
+    timeleap = !git reset --hard HEAD && git clean -d -f
+    uncommit = reset --mixed HEAD~
+    unstage  = reset -q HEAD --
+    untrack  = rm -r --chached
+
+[color]
+    ui          = auto
+    status      = auto
+    diff        = auto
+    branch      = auto
+    interactive = auto
+    grep        = auto
+
+[core]
+    autocrlf  = false
+    editor    = vim
+    quotepath = false
+    safecrlf  = true
+
+[push]
+    defualt = current
+
+[ghq]
+    root = ~/Projects/go/src
+    root = ~/Repositories/
+
+[tig]
+    main-view  = id:width=7 date:custom,format=%Y/%m/%d author commit-title:graph=no,refs=yes
+    blame-view = line-number:yes,interval=1 author id:yes,color,width=7 text
+    stage-view = line-number:yes,interval=1 text
+    pager-view = line-number:yes,interval=1 text
+    log-view   = line-number:yes,interval=1 text
+    blob-view  = line-number:yes,interval=1 text
+    diff-view  = line-number:yes,interval=1 text
+    ignore-case       = true
+    line-graphics     = ascii
+    mouse             = true
+    refresh-mode      = auto
+    split-view-width  = 65%
+    split-view-height = 65%
+    tab-size          = 4
+
+[tig "bind"]
+    # unbind default bindings {{{1
+    main   = C none
+    status = C none
+    stash  = A none
+    stash  = P none
+    stash  = ! none
+    refs   = C none
+    refs   = ! none
+    reflog = C none
+    reflog = ! none
+
+    generic = h none # use: scroll-left, alter: HH
+    generic = y none # use: yank, alter: a(stAsh)
+    generic = L none # use: none, alter: e(rEflog)
+    generic = S none # use: none
+    generic = R none # use: none
+
+    main   = H none
+    main   = G none
+    main   = F none
+    reflog = F none
+
+    generic = o      none
+    generic = I      none
+    generic = i      none
+    generic = <Hash> none
+    generic = D      none
+    generic = A      none
+    generic = ~      none
+    generic = F      none
+    generic = W      none
+    generic = X      none
+    generic = $      none
+    generic = %      none
+    # }}}1
+
+    # complete missing bindings
+    generic = a view-stash
+    generic = e view-reflog
+    generic = v view-grep
+
+    # vim style moving
+    generic = h scroll-left
+    generic = l scroll-right
+    generic = g  none
+    generic = gg move-first-line
+    generic = gG move-last-line
+    generic = GG move-last-line
+    generic = gj next
+    generic = gk previous
+    generic = gp parent
+    generic = gP back
+    generic = gn view-next
+    generic = gH :goto HEAD
+    generic = gO :goto origin/master
+    generic = <C-f> move-page-down
+    generic = <C-b> move-page-up
+    generic = @  none
+    generic = @j :/^@@
+    generic = @k :?^@@
+    generic = "; :/^@@"
+    generic = ", :?^@@"
+
+    # toggle options/columns with 'o'
+    generic = o   none
+    generic = oo  options
+    generic = oso :toggle sort-order
+    generic = osf :toggle sort-field
+    generic = on  :toggle line-number
+    generic = oi  :toggle id
+    generic = od  :toggle date
+    generic = oa  :toggle author
+    generic = og  :toggle line-graphics
+    generic = ofn :toggle file-name
+    generic = off :toggle file-filter
+    generic = op  :toggle ignore-space
+    generic = oto :toggle commit-title-overflow
+    generic = otr :toggle commit-title-refs
+
+    # Git commands
+    generic = Gc !?git commit
+    generic = Gw !?@git commit --amend --no-edit
+    main    = Gp ?git cherry-pick %(commit)
+    main    = Go ?git checkout %(commit)
+    diff    = Gp ?git cherry-pick %(commit)
+    status  = Gs ?git stash push -- %(file)
+    stash   = Ga ?git stash apply %(stash)
+    stash   = Gp ?git stash pop   %(stash)
+    stash   = Gd ?git stash drop  %(stash)
+    refs    = Gc ?git checkout %(branch)
+    refs    = GD ?git branch -D %(branch)
+    reflog  = Gc ?git checkout %(branch)
+    reflog  = GD ?git reset --hard %(commit)
+
+    # show help with 'H'
+    generic = H  none
+    generic = HH view-help
+    main    = HVD !+echo "view: [m]ain [d]iff [l]og [t]ree [s]tatus [c]stage"
+    main    = HVd !+echo "view: [f]blob [b]lame [r]efs [p]ager"
+    main    = HVA !+echo "view: [a]stash [e]reflog [v]grep"
+    status  = HC !+echo "bind: [u]pdate [!]revert [M]erge"
+    stage   = HC !+echo "bind: [u]pdate [!]revert [1]update-line [\\]split-chunk [@]find-@@"
+    main    = HG !+echo "git: [c]ommit [w]rap [p]ick [d]iff [o]checkout"
+    diff    = HG !+echo "git: [c]ommit [w]rap [p]ick [d]iff"
+    status  = HG !+echo "git: [c]ommit [w]rap [s]tash-push-file"
+    stash   = HG !+echo "git: [c]ommit [w]rap [a]pply [p]op [d]rop"
+    refs    = HG !+echo "git: [c]heckout [d]iff [D]branch-D"
+    reflog  = HG !+echo "git: [c]heckout [D]reset-hard"
+
+[tig "color"]
+    title-blur  = white black
+    title-focus = black green bold
+    cursor      = black blue bold
+    line-number = white default normal

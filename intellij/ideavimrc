@@ -1,0 +1,93 @@
+
+set encoding=utf-8
+language C
+
+set lazyredraw
+set number
+set relativenumber
+set fenc=utf-8
+set fileformats=unix,dos
+set showcmd
+set cursorline
+set tabstop=4
+set softtabstop=4
+set expandtab
+set breakindent
+set shiftwidth=4
+set hidden
+set virtualedit=block
+set whichwrap=b,s,h,l,<,>,[,],~
+set backspace=indent,eol,start
+set wrap
+set display=lastline
+set pumheight=10
+set mouse=a
+set wildmenu
+set wildignorecase
+set clipboard=unnamedplus
+set history=100
+set list
+set listchars=tab:)\ ,trail:-,eol:\ ,extends:>,precedes:<,nbsp:-
+set splitright
+set splitbelow
+set hlsearch
+set foldmethod=marker
+set nf=""
+
+noremap <Space> <Nop>
+" normal/visual mode > moving
+noremap j gj
+noremap k gk
+noremap gj j
+noremap gk k
+noremap q $
+noremap H ^
+noremap <Up> gk
+noremap <Down> gj
+noremap <A-Up> <C-b>
+noremap <A-Down> <C-f>
+noremap <A-Left> 0
+noremap <A-Right> $
+noremap <C-Left> b
+noremap <C-Right> w
+" normal/visual mode > cut/yank/paste
+nnoremap Y z$
+nnoremap <C-Up> "zdd<Up>"zP
+nnoremap <C-Down> "zdd"zp
+vnoremap <C-Up> "zdd<Up>"zP
+vnoremap <C-Down> "zdd"zp
+" normal/visual mode > window/buffer
+nnoremap <Tab> <C-w>w
+nnoremap <C-l> <C-w>w
+nnoremap <S-Tab> <C-w>W
+nnoremap <BackSpace> <C-w>W
+nnoremap <Delete> <C-w>W
+nnoremap <C-h> <C-w>W
+nnoremap <silent> <C-a> :<C-u>bn<CR>
+nnoremap <silent> <C-x> :<C-u>bp<CR>
+" normal/visual mode > other
+nnoremap Q q
+noremap + <C-a>
+noremap - <C-x>
+vnoremap < <gv
+vnoremap > >gv
+nnoremap gl <C-l>
+nnoremap <silent> <CR> :<C-u>noh<CR>
+" in insert mode
+inoremap jj <ESC>
+inoremap <C-j> <C-x>
+inoremap <C-Backspace> <ESC>ciw
+inoremap <C-Delete> <Space><ESC>ciw
+inoremap <C-H> <ESC>ciw
+inoremap <C-;> <Delete>
+inoremap <C-+> <Space><ESC>ciw
+" in command mode (emulate Emacs binding)
+cnoremap <C-p> <Up>
+cnoremap <C-n> <Down>
+cnoremap <C-b> <Left>
+cnoremap <C-f> <Right>
+cnoremap <C-a> <Home>
+cnoremap <C-e> <End>
+cnoremap <C-d> <Del>
+" in terminal mode
+tnoremap <S-Space> <Space>

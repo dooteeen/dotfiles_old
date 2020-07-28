@@ -1,0 +1,36 @@
+{
+    "alwaysShowTabs": false,
+    "confirmCloseAllTabs": true,
+    "copyOnSelect": false,
+    "showTabsInTitlebar": true,
+    "shwoTerminalTitleInTitlebar": true,
+    "tabWidthMode": "compact",
+    "theme": "system",
+
+    "profiles": {
+        "defaults": {
+            "useAcrylic": true,
+            "acrylicOpacity": 0.6,
+            "cursorShape": "filledBox",
+            "fontFace": "Cica",
+            "fontSize": 12,
+            "scrollbarState": "hidden",
+            "snapOnInput": true,
+            "suppressApplicationTitle": false,
+            "tabTitle": ""
+        },
+        "list": [
+            {
+                "name": "PowerShell Core",
+                "guid": "",
+                "source": "Windows.Terminal.PowershellCore"
+            },
+            {
+                "name": "Git Bash",
+                "guid": "",
+                "commandline": "",
+                "icon": ""
+            }
+        ]
+    }
+}

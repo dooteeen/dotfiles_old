@@ -1,0 +1,18 @@
+# vim: set ft=gitconfig :
+[alias]
+    count-a  = !git find-a | wc -l
+    count-c  = !git find-c | wc -l
+    count-d  = !git find-d | wc -l
+    count-u  = !git find-u | wc -l
+    find-a   = !git status --short | grep -E '^ ?[A]{1,2}.*'
+    find-c   = !git status --short | grep -E '^ ?[MR]{1,2}.*'
+    find-d   = !git status --short | grep -E '^ ?[D]{1,2}.*'
+    find-u   = !git status --short | grep -E '^.[ADMR\\?]{1,2}.*'
+    info     = !git status -bs | head -n1 | sed -E 's/^.*\\.{3}//g'
+
+[tig "bind"]
+    main = yy !@bash -c \"echo %(commit) | xsel --clipboard --input\"
+
+    main = Gd !@bash -c \"git diff %(commit) | tig\"
+    diff = Gd !@bash -c \"git diff %(commit) | tig\"
+    refs = Gd !@bash -c \"git diff %(commit) | tig\"

@@ -1,0 +1,18 @@
+# vim: set ft=gitconfig :
+[alias]
+    count-a  = !powershell -Command \"(git find-a).Length\"
+    count-c  = !powershell -Command \"(git find-c).Length\"
+    count-d  = !powershell -Command \"(git find-d).Length\"
+    count-u  = !powershell -Command \"(git find-u).Length\"
+    find-a   = !powershell -Command \"git status --short | Select-String -Pattern '^ ?[A]{1,2}.*'\"
+    find-c   = !powershell -Command \"git status --short | Select-String -Pattern '^ ?[MR]{1,2}.*'\"
+    find-d   = !powershell -Command \"git status --short | Select-String -Pattern '^ ?[D]{1,2}.*'\"
+    find-u   = !powershell -Command \"git status --short | Select-String -Pattern '^.[ADMR\\?]{1,2}.*'\"
+    info     = !powershell -Command \"[Regex]::Replace((git status -bs)[0], '^.*\\.{3}', '')\"
+
+[tig "bind"]
+    main = yy !@powershell -Command \"Set-Clipboard -Value %(commit)\"
+
+    main = Gd !@powershell -Command \"git diff %(commit) | tig\"
+    diff = Gd !@powershell -Command \"git diff %(commit) | tig\"
+    refs = Gd !@powershell -Command \"git diff %(commit) | tig\"

@@ -1,0 +1,37 @@
+
+" load font
+if !exists('g:gvim_font_loaded')
+    if has('gui_running') " for gvim
+        set guioptions=gita
+        nnoremap <silent> <F12> :<C-u>set guifont=*<CR>
+
+        if has('win32') " for Kaoriya vim
+            silent set renderoptions=type:directx,renmode:5
+            try
+                set guifont=Cica:h9
+            catch
+                set guifont=Consolas:h9
+                let g:webdevicons_enable = 0
+            endtry
+        else
+            silent set guifont=Cica\ 9
+        endif
+    elseif exists('g:GuiLoaded') " for neovim-qt
+        set termguicolors
+        silent GuiTabline 0
+        try
+            silent GuiFont! Cica:h9
+            silent GuiLinespace 0
+        catch
+            let g:webdevicons_enable = 0
+        endtry
+    endif
+    let g:gvim_font_loaded = 1
+endif
+
+if IsPlugged('onedark.vim')
+    color onedark
+else
+    set background=dark
+    color default
+endif

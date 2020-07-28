@@ -1,0 +1,1066 @@
+set encoding=utf8
+scriptencoding utf-8
+language C
+
+" define variables and functions {{{1
+let s:here   = fnamemodify(resolve(expand('<sfile>:p')), ':h')
+let s:is_wsl = has('unix') ? str2nr(system('uname -a | grep -c "Microsoft"')) : 0
+let s:base   = s:is_wsl ? $HOME : substitute(s:here, 'vim', '.data', 'g')
+let s:app    = has('nvim') ? 'nvim' : 'vim'
+let g:dotfiles = substitute(s:here, 'vim', '', 'g')
+let s:is_android = isdirectory('/data/data/com.termux')
+
+fun! SystemCheck(cmd)
+    return str2nr(system(a:cmd))
+endfun
+
+fun! IsGvim()
+    return has('gui_running') || exists('GuiLoaded') || exists('g:fvim_loaded')
+endfun
+
+fun! IsTTY()
+    return $TERM == "linux"
+endfun
+
+fun! IsPlugged(name)
+    return exists('g:plugs') && has_key(g:plugs, a:name) && isdirectory(g:plugs[a:name].dir)
+endfun
+
+fun! Whereis(command)
+    let cmd = has('win32') ? 'where ' : 'which '
+    return executable(a:command)
+        \ ? substitute(system(cmd.a:command), '\v[\r\n]*', '', 'g')
+        \ : ""
+endfun
+
+fun! s:mkdir(dir, option)
+    if empty(glob(a:dir))
+        call mkdir(a:dir, a:option)
+    endif
+endfun
+
+fun! s:fixDir(dir)
+    return has('win32')
+        \ ? substitute(a:dir, '/', '\\', 'g')
+        \ : a:dir
+endfun
+
+fun! s:warn(msg)
+    echohl WarningMsg
+    echom  a:msg
+    echohl None
+    return 0
+endfun
+"}}}1
+
+" shell settings for windows {{{1
+if has('win32') && executable('powershell')
+    set shell=powershell
+    set shellpipe=|
+endif
+" }}}1
+
+" install vim-plug {{{1
+let s:vimplug = s:base.'/vim/autoload/plug.vim'
+let s:plugins = s:base.'/'.s:app.'/plugged'
+if empty(glob(s:vimplug))
+    let s:location = s:fixDir(s:vimplug)
+    let s:vimplug_url = 'https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
+    if has('win32') && has('scoop') && !executable('curl')
+        exec 'silent !scoop install gow'
+    endif
+    if executable('curl')
+        exec 'silent !curl -fLo '.s:location.' --create-dirs '.s:vimplug_url
+    endif
+endif
+
+" }}}1
+
+" install plugins {{{1
+
+fun! s:installablePlugins()
+    return has('unix')
+        \ ? filereadable(s:vimplug) && executable('git') && executable('make')
+        \ : filereadable(s:vimplug) && executable('git')
+endfun
+if s:installablePlugins()
+    nnoremap <F5> :<C-u>PlugClean! \| PlugUpdate<CR>
+    let g:plug_threads = 16
+    let g:loaded_matchparen = 1
+    exec 'source '.s:vimplug
+    call plug#begin(s:plugins)
+    Plug 'joshdick/onedark.vim'
+    Plug 'sheerun/vim-polyglot'
+    Plug 'Shougo/context_filetype.vim'
+    Plug 'w0rp/ale'
+    Plug 'editorconfig/editorconfig-vim'
+    Plug 'kana/vim-smartinput'
+    Plug 'tpope/vim-endwise'
+    Plug 'kana/vim-textobj-user'
+    Plug 'thinca/vim-textobj-between'
+    Plug 'sgur/vim-textobj-parameter'
+    Plug 'tweekmonster/braceless.vim'
+    Plug 'jiangmiao/auto-pairs'
+    Plug 'tmhedberg/matchit'
+    Plug 'itchyny/vim-parenmatch'
+    Plug 'tpope/vim-surround'
+    Plug 'junegunn/vim-easy-align'
+    Plug 'tomtom/tcomment_vim'
+    Plug 'Konfekt/FastFold'
+    Plug 'easymotion/vim-easymotion'
+    Plug 'markonm/traces.vim'
+    Plug 'thinca/vim-zenspace'
+    Plug 'osyo-manga/vim-over'
+    Plug 'airblade/vim-gitgutter'
+    Plug 'tpope/vim-fugitive'
+    Plug 'iberianpig/tig-explorer.vim'
+    Plug 'Yggdroot/indentLine'
+    if has('unix') && executable('jq')
+        Plug 'https://bitbucket.org/rkbk60/tapi-reg.vim', { 'branch': 'modify' }
+    endif
+    if has('win32') || system('uname -a | grep -c "x86_64"')
+        Plug 'simeji/winresizer'
+        Plug 'itchyny/lightline.vim'
+        Plug 'maximbaz/lightline-ale'
+    endif
+
+    Plug 'glabra/casl2.vim'
+    Plug 'mattn/emmet-vim'
+    Plug 'ap/vim-css-color', { 'for': ['css', 'sass', 'scss'] }
+    Plug 'tyru/open-browser.vim'
+    Plug 'kannokanno/previm',     { 'for': ['markdown', 'adoc'], 'on': 'PrevimOpen' }
+    Plug 'rhysd/vim-gfm-syntax', { 'for': 'markdown' }
+
+    if has('win32') && executable('scoop')
+        if !executable('fzf')
+            exec '!silent scoop install fzf'
+        endif
+        Plug 'junegunn/fzf'
+        Plug 'junegunn/fzf.vim'
+    elseif executable('fzf')
+        Plug Whereis('fzf')
+        Plug 'junegunn/fzf.vim'
+    elseif has('unix')
+        let g:vimrc_fzf_dir = s:base.'/fzf'
+        Plug 'junegunn/fzf', { 'dir': g:vimrc_fzf_dir, 'do': './install' }
+        Plug 'junegunn/fzf.vim'
+    endif
+
+    if has('nvim')
+        " for LSP
+        Plug 'prabirshrestha/async.vim'
+        Plug 'prabirshrestha/vim-lsp'
+        Plug 'mattn/vim-lsp-settings'
+    else
+        Plug 'rhysd/wandbox-vim'
+        Plug 'thinca/vim-fontzoom'
+    endif
+    call plug#end()
+
+    " install plugins automatically on first run
+    if empty(glob(s:plugins . '/?*'))
+        au VimEnter *
+            \   set background=dark
+            \ | let g:plug_window = 'enew'
+            \ | PlugInstall --sync | bd
+            \ | source $MYVIMRC
+            \ | let g:plug_window = 'vertical topleft new'
+    endif
+endif
+"}}}1
+
+" options {{{1
+set modeline
+set lazyredraw
+set notimeout
+set number
+set relativenumber
+set fenc=UTF-8
+set fileformats=unix,dos
+set showcmd
+set cursorline
+set tabstop=4
+set softtabstop=4
+set expandtab
+set breakindent
+set shiftwidth=4
+set hidden
+set virtualedit=block
+set whichwrap=b,s,h,l,<,>,[,],~
+set backspace=indent,eol,start
+set wrap
+set display=lastline
+set pumheight=10
+set shellslash
+set mouse=a
+set wildmenu
+set ignorecase
+set smartcase
+set clipboard=unnamed,unnamedplus
+set history=100
+set list
+set listchars=tab:)\ ,trail:-,eol:\ ,extends:>,precedes:<,nbsp:-
+set showbreak=>\  
+set splitright
+set splitbelow
+set notildeop
+set hlsearch
+set foldmethod=marker " set-foldtext will be defined by FoldTextCustom.
+set nf=""
+set autowrite
+set nocompatible
+set modeline
+set laststatus=2
+set showtabline=2
+set iminsert=0
+set imsearch=-1
+set ambiwidth=double
+set shortmess=filmnxtTWIF
+fun! StatuslineMAlter()
+    return
+        \   &filetype == 'terminal' || &filetype == 'netrw' ? ''
+        \ : &readonly ? '-'
+        \ : &modified ? '+'
+        \ : ''
+endfun
+" 'set tabline' is called in 'other settings unrelated to plugins > custom tablie'.
+if has('nvim')
+    set noshowmode
+endif
+
+set backup
+set undofile
+let s:tmpdir = s:base.'/'.s:app.'/tmp'
+call s:mkdir(s:tmpdir, 'p')
+call s:mkdir(s:tmpdir.'/backup', '')
+call s:mkdir(s:tmpdir.'/swap',   '')
+call s:mkdir(s:tmpdir.'/undo',   '')
+exec 'set backupdir='.substitute(s:tmpdir.'/backup',      '\\', '/', 'g')
+exec 'set directory='.substitute(s:tmpdir.'/swap',        '\\', '/', 'g')
+exec 'set undodir='  .substitute(s:tmpdir.'/undo',        '\\', '/', 'g')
+exec 'set viminfo+=n'.substitute(s:tmpdir.'/viminfo.txt', '\\', '/', 'g')
+
+" Windows shell settings has written above.
+if executable('fish') && &term != 'screen-256color'
+    set shell=fish
+    set shellpipe=|
+endif
+" "}}}1
+
+" keymaps {{{1
+let g:mapleader = "\\"
+" normal/visual mode > moving {{{2
+noremap j         gj
+noremap k         gk
+noremap gj        j
+noremap gk        k
+noremap q         $
+noremap G         <Nop>
+noremap GG        G
+noremap H         ^
+noremap L         $
+noremap t         <Nop>
+noremap T         <Nop>
+noremap <C-d>     L
+noremap <C-t>     <Nop>
+noremap <C-u>     H
+noremap <Up>      gk
+noremap <Down>    gj
+noremap <A-Up>    <C-b>
+noremap <A-Down>  <C-f>
+noremap <A-Left>  0
+noremap <A-Right> $
+noremap <C-Left>  b
+noremap <C-Right> w
+" normal/visual mode > cut/yank/paste {{{2
+noremap x "_x
+noremap X "_X
+noremap s "_s
+noremap S "_S
+nnoremap Y y$
+nnoremap <C-Up>   "zdd<Up>"zP
+nnoremap <C-Down> "zdd"zp
+vnoremap <C-Up>   "zdd<Up>"zP
+vnoremap <C-Down> "zdd"zp
+xnoremap <expr> p 'pgv"'.v:register.'y`>'
+" normal/visual mode > window/buffer {{{2
+nnoremap <Space>- :<C-u>sp<CR>
+nnoremap <Space>/ :<C-u>vs<CR>
+nnoremap <C-w><C-h> <C-w>H
+nnoremap <C-w><C-j> <C-w>J
+nnoremap <C-w><C-k> <C-w>K
+nnoremap <C-w><C-l> <C-w>L
+nnoremap <C-w>H <C-w><C-h>
+nnoremap <C-w>J <C-w><C-j>
+nnoremap <C-w>K <C-w><C-k>
+nnoremap <C-w>L <C-w><C-l>
+nnoremap <Tab>       <C-w>w
+nnoremap <S-Tab>     <C-w>W
+nnoremap <BackSpace> <C-w>W
+nnoremap <Delete>    <C-w>W
+nnoremap <silent> <C-a> :<C-u>bn<CR>
+nnoremap <silent> <C-x> :<C-u>bp<CR>
+" normal/visual mode > other {{{2
+nnoremap Q  q
+nnoremap + <C-a>
+nnoremap - <C-x>
+vnoremap + <C-a>gv
+vnoremap - <C-x>gv
+vnoremap g+ g<C-a>
+vnoremap g- g<C-x>
+nnoremap gl <C-l>
+if IsGvim()
+    nnoremap <silent> <S-CR> :<C-u>on<CR>
+    nnoremap <silent> <CR> :<C-u>noh<CR>
+else
+    nnoremap <silent> <F12> :<C-u>on<CR>
+endif
+" in insert mode {{{2
+imap <C-s> [InsertLeader]
+inoremap <C-q>         <C-r><C-p>
+inoremap <Up>          <C-o>gk
+inoremap <Down>        <C-o>gj
+inoremap <C-Backspace> <ESC>ciw
+inoremap <C-Delete>    <Space><ESC>ciw
+inoremap <PageUp>      <Home>
+inoremap <PageDown>    <End>
+" in insert mode for Termux with my keyboard app {{{2
+if s:is_android
+    inoremap <F5>  <C-x><C-f>
+    inoremap <F7>  <C-p>
+    inoremap <F10> <C-n>
+endif
+" in insert mode > C-x -> C-l {{{2
+inoremap <C-l>      <Nop>
+inoremap <C-l>]     <C-x><C-]>
+inoremap <C-l>d     <C-x><C-d>
+inoremap <C-l>f     <C-x><C-f>
+inoremap <C-l>i     <C-x><C-i>
+inoremap <C-l>k     <C-x><C-k>
+inoremap <C-l>l     <C-x><C-l>
+inoremap <C-l>n     <C-x><C-n>
+inoremap <C-l>o     <C-x><C-o>
+inoremap <C-l>s     <C-x><C-s>
+inoremap <C-l>t     <C-x><C-t>
+inoremap <C-l>u     <C-x><C-u>
+inoremap <C-l>v     <C-x><C-v>
+inoremap <C-x>      <Nop>
+inoremap <C-x>s     <Nop>
+inoremap <C-x><C-]> <Nop>
+inoremap <C-x><C-d> <Nop>
+inoremap <C-x><C-e> <Nop>
+inoremap <C-x><C-f> <Nop>
+inoremap <C-x><C-i> <Nop>
+inoremap <C-x><C-k> <Nop>
+inoremap <C-x><C-l> <Nop>
+inoremap <C-x><C-n> <Nop>
+inoremap <C-x><C-o> <Nop>
+inoremap <C-x><C-p> <Nop>
+inoremap <C-x><C-s> <Nop>
+inoremap <C-x><C-t> <Nop>
+inoremap <C-x><C-u> <Nop>
+inoremap <C-x><C-v> <Nop>
+" in command mode (emulate Emacs binding) {{{2
+cnoremap <C-p> <Up>
+cnoremap <C-n> <Down>
+cnoremap <C-b> <Left>
+cnoremap <C-f> <Right>
+cnoremap <C-a> <Home>
+cnoremap <C-e> <End>
+cnoremap <C-d> <Del>
+cnoremap <C-g> <Esc>
+" in terminal mode {{{2
+if has('terminal')
+    tnoremap <S-Space> <Space>
+    set termwinkey=<C-u>
+    nnoremap @@ :<C-u>terminal ++curwin<CR>
+    nnoremap @- :<C-u>terminal<CR>
+    nnoremap @/ :<C-u>vert terminal<CR>
+    tnoremap JJH <C-u>h
+    tnoremap JJJ <C-u>j
+    tnoremap JJK <C-u>k
+    tnoremap JJL <C-u>l
+    tnoremap JJN <C-u>:bn<CR>
+    tnoremap JJP <C-u>"0
+    tnoremap JJQ <C-\><C-n>:bd!<CR>
+    tnoremap JJt <C-u>:tabn<CR>
+    tnoremap JJT <C-u>:tabp<CR>
+    tnoremap JJ: <C-u>:
+    tnoremap JJ[ <C-\><C-n>
+elseif has('nvim')
+    nnoremap @@ :<C-u>term<CR>i
+    nnoremap @- :<C-u>sp <Bar> term<CR>i
+    nnoremap @/ :<C-u>vs <Bar> term<CR>i
+    tnoremap JJH <C-\><C-n><C-w>h
+    tnoremap JJJ <C-\><C-n><C-w>j
+    tnoremap JJK <C-\><C-n><C-w>k
+    tnoremap JJL <C-\><C-n><C-w>l
+    tnoremap JJN <C-\><C-n>:<C-u>bn<CR>
+    tnoremap JJP <C-\>"0
+    tnoremap JJQ <C-\><C-n>:<C-u>bd!<CR>
+    tnoremap JJt <C-\><C-n>:<C-u>tabn<CR>
+    tnoremap JJT <C-\><C-n>:<C-u>tabp<CR>
+    tnoremap JJ: <C-\><C-n>:
+    tnoremap JJ[ <C-\><C-n>
+endif
+"}}}2
+"}}}1
+
+" commands {{{1
+" reload vimrc/gvimrc
+if !exists('g:loaded_reloader')
+    fun! s:reload_vimrc()
+        let vimrc = has('win32') ? $HOME.'/_vimrc'
+            \ : filereadable($HOME.'/.vimrc') ? $HOME.'/.vimrc'
+            \ : s:here.'/vimrc'
+        exec 'source '.vimrc
+        if filereadable(s:here.'/gvimrc') && (has('gui_running') || exists('g:GuiLoaded'))
+            let gvimrc = has('win32') ? $HOME.'/_gvimrc'
+                \ : filereadable($HOME.'/.gvimrc') ? $HOME.'/.gvimrc'
+                \ : s:here.'/gvimrc'
+            exec 'source '.gvimrc
+        endif
+        if IsPlugged('lightline.vim')
+            call lightline#init()
+            call lightline#colorscheme()
+            call lightline#update()
+        endif
+    endfun
+    com! Reload call s:reload_vimrc()
+    let g:loaded_reloader = 1
+endif
+
+" change dotfiles directory
+com! Dotfiles exec 'cd' g:dotfiles | echo '[Dotfiles] Moved to'g:dotfiles
+
+" change tab size
+fun! s:resize_tabsize(size)
+    exec 'setlocal tabstop='.a:size
+    exec 'setlocal shiftwidth='.a:size
+endfun
+com! -nargs=1 TabSize call s:resize_tabsize(<q-args>)
+"}}}1
+
+" other settings unrelated to plugins {{{1
+let g:vim_indent_cont = &tabstop
+if executable('rg')
+    set grepprg=rg\ --color=never
+elseif executable('ag')
+    set grepprg=ag\ --nocolor\ --nogroup
+endif
+" custom title/tab/statusline {{{2
+fun! GitInfo()
+    return ''
+endfun
+
+fun! ImeInfo()
+    return ''
+endfun
+
+set tabline=\ %{StatuslineMAlter()}%{tabpagenr()}.%n%{strlen(expand('%:f'))?'\ '.expand('%:t'):''}%=%{ImeInfo()}%{GitInfo()}%{&ff=='unix'?'':'CRLF\ '}%{&fenc==#'utf-8'?'':'Enc:'.&fenc.'\ '}%{strlen(&ft)?&ft:'plain'}:%L\   
+set titlestring=%{StatuslineMAlter()}%{has('nvim')?'nvim':(has('gui_running')?'gvim':'vim')}%{strlen(@%)?'\ \ :\ '.expand('%:p:~'):''}
+set statusline=\ %{StatuslineMAlter()}%n.%v.%l\ \ %{exists('g:debug')&&g:debug==1?'color:'.synIDattr(synID(line('.'),col('.'),1),'name'):''}%=%{strlen(expand('%:f'))?expand('%:t'):'\ -\ '}\   
+
+" netrw settings to use like NERDTree {{{2
+let g:netrw_banner = 0
+let g:netrw_liststyle = 3
+let g:netrw_browse_split = 4
+let g:netrw_altv = 1
+let g:netrw_winsize = -30
+let g:netrw_mousemaps = 0
+aug NetrwCommandKeymap
+    au!
+    au FileType netrw noremap <silent> <buffer> H  <F1>:h netrw-quickmap<CR>
+    au FileType netrw noremap <silent> <buffer> qq :<C-u>bd<CR>
+    au FileType netrw noremap <silent> <buffer> Q  :<C-u>bd<CR>
+aug END
+nnoremap TT :<C-u>exec 'Vexplore' getcwd()<CR>
+
+" correlate some extentions to filetypes {{{2
+aug ExtendExtentions
+    au!
+    " for markdown
+    au BufNewFile,BufRead *.{md,mdwn,mkd,mkdn,mark*} set ft=markdown
+    " for Nyagos script
+    au BufNewfile,BufRead .nyagos set ft=lua
+aug END
+
+" set spell option on gitcommit {{{2
+aug AutoSpellMode
+    au!
+    au FileType gitcommit setlocal spell
+    au FileType gitcommit setlocal complete+=kspell
+aug END
+
+" apply vim-anyfold style foldtext method {{{2
+fun! FoldTextCustom()
+    let fs = v:foldstart
+    while getline(fs) !~ '\w'
+        let fs = nextnonblank(fs + 1)
+    endwhile
+    if fs > v:foldend
+        let line = getline(v:foldstart)
+    else
+        let line = substitute(getline(fs), '\t', repeat(' ', &tabstop), 'g')
+    endif
+    let line = substitute(line, '\v\{{3}(\d{1,})', '{\1}', 'g')
+    let line = substitute(line, '\v\{{3}', '{...}', 'g')
+
+    let w = winwidth(0) - &foldcolumn - &number * &numberwidth
+    let foldSize = 1 + v:foldend - v:foldstart
+    let foldSizeStr = " " . foldSize . " lines "
+    let foldLevelStr = repeat("==", v:foldlevel)
+    let lineCount = line("$")
+    let expansionString = repeat(" ", w - strwidth(foldSizeStr.line.foldLevelStr) - 1)
+    return line . expansionString . foldSizeStr . foldLevelStr
+endfun
+set foldtext=FoldTextCustom()
+
+" make 'terminal' filetype with setting some options {{{2
+fun! s:bufnew()
+    if &buftype == "terminal" && &filetype == ""
+        set filetype=terminal
+        setlocal nonumber
+        setlocal norelativenumber
+    endif
+endfun
+aug FTTerminal
+    au!
+    au BufNew * call timer_start(0, { -> s:bufnew() })
+aug END
+
+" binary mode settings {{{2
+aug BinaryXXD
+    au!
+    au BufReadPre   *.bin let &binary = 1
+    au BufReadPost  * if &binary | silent %!xxd -g 1
+    au BufReadPost  * set ft=xxd | endif
+    au BufWritePre  * if &binary | %!xxd -r | endif
+    au BufWritePost * if &binary | silent %!xxd -g 1
+    au BufWritePost * set nomod | endif
+aug END
+
+" clipboard setting {{{2
+if s:is_wsl && executable('win32yank.exe')
+    let g:clipboard = {
+        \ 'name': 'WSL_Clipboard',
+        \ 'cache_enabled': 1,
+        \ 'copy': {
+        \   '+': 'win32yank.exe -i',
+        \   '*': 'win32yank.exe -i',
+        \   },
+        \ 'paste': {
+        \   '+': 'win32yank.exe -o',
+        \   '*': 'win32yank.exe -o',
+        \   },
+        \ }
+endif
+"}}}1
+
+" settings related to plugins {{{1
+" input helpers {{{2
+if IsPlugged('vim-easy-align')
+    vmap <CR> <Plug>(EasyAlign)
+endif
+
+if IsPlugged('vim-easymotion')
+    let g:EasyMotion_do_mapping = 0
+    let g:EasyMotion_smartcase = 1
+    nmap <Space><Space> <Plug>(easymotion-overwin-f2)
+endif
+
+" for emmet-vim
+if IsPlugged('emmet-vim')
+    let g:user_emmet_install_global = 0
+    let g:user_emmet_mode = 'a'
+    aug SmartEmmet
+        au!
+        au FileType css,scss,sass,html,xml,svg,markdown
+            \ EmmetInstall
+        au FileType css,scss,sass,html,xml,svg,markdown
+            \ imap <buffer><expr> <Tab>
+            \   emmet#isExpandable() ? '<plug>(emmet-expand-abbr)' : '<Tab>'
+        au FileType css,scss,sass,html,xml,svg,markdown
+            \ vnoremap <buffer> <Tab> <plug>(emmet-expand-abbr)
+    aug END
+endif
+
+if IsPlugged('im_control.vim')
+    if has('win32')
+        let IM_CtrlMode = 4
+        inoremap <silent> [InsertLeader]im <C-^><C-r>=IMState('FixMode')<CR>
+    elseif executable('ps') && SystemCheck('ps -e 2>&1 | grep -c gnome')
+        let IM_CtrlMode = 1
+        inoremap <silent> [InsertLeader]im <C-r>=IMState('FixMode')<CR>
+        let s:im_cmd = "setxkbmap -print | grep xkb_symbols | awk '{print $4}' | awk -F '+' '{print $2}'"
+        let s:keyboard_layout = system(s:im_cmd) == 'jp\n'
+            \ ? '"xkb:jp::jpn"'
+            \ : '"xkb:us::eng"'
+        fun! IMCtrl(cmd)
+            if a:cmd == 'Off'
+                let res = system('ibus engine '.s:keyboard_layout)
+            elseif a:cmd == 'On'
+                let res = system('ibus engine "mozc-jp"')
+            endif
+            return ''
+        endfun
+    endif
+endif
+
+" language support, appearance {{{2
+" for indentLine
+let g:indentLine_bufTypeExclude = ['help', 'terminal', 'vim']
+let g:indentLine_char = '|'
+
+if IsPlugged('tcomment_vim')
+    let g:tcomment_maps = 0
+    nnoremap <silent> g/  :TComment<CR>
+    vnoremap <silent> g/  :TCommentBlock<CR>
+    noremap  <silent> gca :TCommentBlock<CR>
+    noremap  <silent> gcc :TComment<CR>
+    noremap  <silent> gci :TCommentInline mode=I#<CR>
+    noremap  <silent> gcq :TCommentRight<CR>
+else
+    noremap g/  :<C-u>echo TComment has not installed.<CR>
+    noremap gca :<C-u>echo TComment has not installed.<CR>
+    noremap gcc :<C-u>echo TComment has not installed.<CR>
+    noremap gci :<C-u>echo TComment has not installed.<CR>
+    noremap gcq :<C-u>echo TComment has not installed.<CR>
+endif
+
+let g:polyglot_disabled = ['csv', 'markdown']
+
+if IsPlugged('auto-pairs') "skip to check that other plugins have installed
+    aug PairsConfig
+        au!
+        au FileType dosbatch let b:AutoPairs = AutoPairsDefine({ '%': '%' })
+        au FileType dosbatch let b:surround_{char2nr('%')} = '%\w%'
+    aug END
+endif
+
+if IsPlugged('vim-gfm-syntax')
+    let g:gfm_syntax_enable_filetypes = ['gfm']
+    let g:markdown_fenced_languages = ['json', 'python', 'lua', 'sh', 'fish', 'vim']
+endif
+
+if IsPlugged('braceless.vim')
+    aug Braceless
+        au!
+        au FileType python BracelessEnable +fold +highlight-cc2
+        au FileType yaml   BracelessEnable +fold +highlight
+    aug END
+endif
+
+if IsPlugged('vim-markdown')
+    let g:vim_markdown_folding_disabled = 1
+    let g:vim_markdown_override_foldtext = 0
+    let g:vim_markdown_conceal = 0
+endif
+
+" for vim-lsp-settings
+let g:lsp_settings_servers_dir = s:base.'/lsp-settings/servers'
+
+if IsPlugged('ale')
+    let g:ale_enabled = 0
+    noremap  <F3> :<C-u>ALEToggle<CR>
+    inoremap <F3> <C-o>:<C-u>ALEToggle<CR>
+
+    let g:ale_echo_msg_format = '[%linter%]%s'
+    if IsPlugged('lightline-ale')
+        let g:lightline#ale#indicator_error    = 'E:'
+        let g:lightline#ale#indicator_warnings = 'W:'
+    endif
+endif
+
+if IsPlugged('casl2.vim')
+    aug CASLII
+        au!
+        au BufRead,BufNewFile *.cas   set ft=casl2
+        au BufRead,BufNewFile *.casl  set ft=casl2
+        au BufRead,BufNewFile *.casl2 set ft=casl2
+    aug END
+endif
+
+" utilities {{{2
+"for editorconfig
+let g:EditorConfig_exclude_patterns = ['fugitive://.*']
+
+if IsPlugged('vim-fugitive')
+    noremap g: :<C-u>G
+    noremap g; :<C-u>G
+    com! Girebase Grebase -i
+    com! Gwrap    Gcommit --amend --no-edit
+endif
+
+if IsPlugged('tig-explorer.vim')
+    let g:tig_explorer_keymap_edit = '<C-e>'
+    nnoremap tt  :<C-u>TigOpenProjectRootDir<CR>
+    nnoremap t-t :<C-u>sp <Bar> TigOpenProjectRootDir<CR>
+    nnoremap t/t :<C-u>vs <Bar> TigOpenProjectRootDir<CR>
+    nnoremap ts  :<C-u>TigStatus<CR>
+    nnoremap t-s :<C-u>sp <Bar> TigStatus<CR>
+    nnoremap t/s :<C-u>vs <Bar> TigStatus<CR>
+endif
+
+" for open-browser and previm
+if IsPlugged('open-browser.vim')
+    let g:netrw_nogx = 1
+    let g:previm_enable_realtime = 1
+    nmap gx <Plug>(openbrowser-smart-search)
+    vmap gx <Plug>(openbrowser-smart-search)
+endif
+
+
+" for split-term
+let g:disable_key_mappings = 1
+
+" for winresizer
+let g:winresizer_start_key = "<C-W>R"
+let g:winresizer_vert_resize  = 2
+let g:winresizer_horiz_resize = 2
+
+" for quickrun
+let g:quickrun_config = get(g:, 'quickrun_config', {})
+let g:quickrun_config._ = {
+      \ 'runner': 'vimproc',
+      \ 'outputter': 'error',
+      \ 'outputter/error/success': 'buffer',
+      \ 'outputter/error/error': 'quickfix',
+      \ 'outputter/buffer/sprit': 'vertical',
+      \ 'outputter/buffer/close_on_empty': 1,
+      \ }
+
+if IsPlugged('wandbox-vim')
+    if IsPlugged('vim-quickrun')
+        nnoremap <silent> <S-F9> <C-u>:QuickRun -runner wandbox<CR>
+    else
+        nnoremap <silent> <S-F9> <C-u>:Wandbox<CR>
+    endif
+else
+    nnoremap <S-F9> <Nop>
+endif
+
+if IsPlugged('vim-fontzoom')
+    let g:fontzoom_no_default_key_mappings = 1
+    noremap  <silent> <C-ScrollWheelUp>   :Fontzoom +1<CR>
+    noremap  <silent> <C-ScrollWheelDown> :Fontzoom -1<CR>
+    inoremap <silent> <C-ScrollWheelUp>   <C-o>:Fontzoom +1<CR>
+    inoremap <silent> <C-ScrollWheelDown> <C-o>:Fontzoom -1<CR>
+endif
+
+if IsPlugged('vim-devicons')
+    let g:webdevicons_enable_nerdtree = 0
+    if exists('g:loaded_webdevicons')
+        call webdevicons#refresh()
+    endif
+endif
+
+" fzf.vim {{{2
+if IsPlugged('fzf.vim')
+    let $BAT_CONFIG_PATH  = g:dotfiles.'/bat/bat.conf'
+    let $FZF_DEFAULT_OPTS = ''
+    let g:fzf_action = { 
+        \   'ctrl-r': 'view',
+        \   'ctrl-s': 'sp',
+        \   'ctrl-v': 'vs',
+        \ }
+    let g:fzf_buffers_jump = 1
+    let g:fzf_colors = {
+        \   'fg':      ['fg', 'Normal'],
+        \   'bg':      ['bg', 'Normal'],
+        \   'hl':      ['fg', 'Comment'],
+        \   'fg+':     ['fg', 'CursorLine', 'CursorColumn', 'Normal'],
+        \   'bg+':     ['bg', 'CursorLine', 'CursorColumn'],
+        \   'hl+':     ['fg', 'MatchParen'],
+        \   'info':    ['fg', 'PreProc'],
+        \   'border':  ['fg', 'Ignore'],
+        \   'prompt':  ['fg', 'String'],
+        \   'pointer': ['fg', 'Exception'],
+        \   'marker':  ['fg', 'Keyword'],
+        \   'spinner': ['fg', 'Label'],
+        \   'header':  ['fg', 'Comment']
+        \ }
+    let g:fzf_command_prefix = 'FZF'
+    let g:fzf_history_dir = s:base.'/'.s:app.'/fzf_cache'
+    let g:fzf_layout = { 'down': '~20%' }
+    let g:fzf_custom_ghq_root = {
+        \ 'source': executable('ghq')
+        \         ? 'ghq list -p'
+        \         : 'find ~/Projects/* -maxdepth 2 -mindepth 2 -type d',
+        \ 'sink': 'cd',
+        \ 'down': '~20%'
+        \ }
+    let g:fzf_custom_ghq = {
+        \ 'source': 'fd -t d . ~/Repositories/*',
+        \ 'sink': 'cd',
+        \ 'down': '~20%'
+        \ }
+    let g:fzf_custom_projects_root = {
+        \ 'source': executable('fd')
+        \       ? 'fd --min-depth 1 -t d . ~/Projects/*'
+        \       : 'find ~/Projects/* -maxdepth 1 -mindepth 3 -type d',
+        \ 'sink': 'cd',
+        \ 'down': '~20%'
+        \ }
+    let g:fzf_custom_projects = {
+        \ 'source': 'fd -t d . ~/Projects/*',
+        \ 'sink': 'cd',
+        \ 'down': '~20%'
+        \ }
+    fun! s:fzf_run_projects()
+        return executable('fd')
+            \ ? fzf#run(g:fzf_custom_projects)
+            \ : s:warn('fd has not installed')
+    endfun
+    fun! s:fzf_run_ghq_root()
+        return executable('ghq')
+            \ ? fzf#run(g:fzf_custom_ghq_root)
+            \ : s:warn('ghq has not installed')
+    endfun
+    fun! s:fzf_run_ghq()
+        return executable('fd') && executable('ghq')
+            \ ? fzf#run(g:fzf_custom_ghq)
+            \ : s:warn('ghq has not installed')
+    endfun
+    com! -nargs=0 FZFGhq          call s:fzf_run_ghq()
+    com! -nargs=0 FZFGhqRoot      call s:fzf_run_ghq_root()
+    com! -nargs=0 FZFProjectsRoot call fzf#run(g:fzf_custom_projects_root)
+    com! -nargs=0 FZFProjects     call s:fzf_run_projects()
+
+    nnoremap <silent> <Space>b :<C-u>FZFBuffers<CR>
+    nnoremap <silent> <Space>f :<C-u>FZFFiles<CR>
+    nnoremap <silent> <Space>g :<C-u>FZFGFiles<CR>
+    nnoremap <silent> <Space>G :<C-u>FZFGFiles?<CR>
+    nnoremap <silent> <Space>l :<C-u>FZFLines<CR>
+    nnoremap <silent> <Space>L :<C-u>FZFFiletypes<CR>
+    nnoremap <silent> <Space>m :<C-u>FZFHistory<CR>
+    nnoremap <silent> <Space>M :<C-u>FZFMarks<CR>
+    nnoremap <silent> <Space>p :<C-u>FZFProjectsRoot<CR>
+    nnoremap <silent> <Space>P :<C-u>FZFProjects<CR>
+    nnoremap <silent> <Space>q :<C-u>FZFGhqRoot<CR>
+    nnoremap <silent> <Space>Q :<C-u>FZFGhq<CR>
+    nnoremap <silent> <Space>r :<C-u>FZFRg<CR>
+    nnoremap <silent> <Space>t :<C-u>FZFTags<CR>
+endif
+
+" lightline {{{2
+let g:lightline = {
+    \  'active': {
+    \    'left': [ [ 'mode', 'paste' ], [ 'linter_warnings', 'linter_errors', 'filename', 'modified' ] ],
+    \    'right': [ [ 'lineinfo' ] ]
+    \  },
+    \  'inactive': {
+    \    'left': [ [ 'fnamewithbufnum' ] ],
+    \    'right': [ [ 'lineinfo' ] ]
+    \  },
+    \  'component': {
+    \    'filename': '%t', 'modified': '%M', 'fnamewithbufnum': '%n %t',
+    \    'paste': '%{&paste?"PASTE":""}', 'readonly': '%R', 'lineinfo': '%3l:%-2v',
+    \  },
+    \  'component_visible_condition': {
+    \    'modified': '&modified||!&modifiable', 'readonly':'&readonly&&(&ft!="terminal")', 'paste': '&paste',
+    \  },
+    \  'component_expand': {
+    \    'linter_warnings': 'lightline#ale#warnings',
+    \    'linter_errors': 'lightline#ale#errors',
+    \  },
+    \  'component_type': {
+    \    'linter_warnings': 'warning', 'linter_errors': 'error',
+    \  },
+    \  'mode_map': {
+    \    'n': 'Normal', 'i': 'Insert', 'R': 'Replace', 'v': 'Visual', 'V': 'V-Line', "\<C-v>": 'V-Block',
+    \    'c': 'Command', 's': 'Select', 'S': 'S-Line', "\<C-s>": 'S-Block', 't': 'Terminal',
+    \  },
+    \  'enable': { 'statusline': 1, 'tabline': 0 },
+    \  '_mode_': {
+    \    'n': 'normal', 'i': 'insert', 'R': 'replace', 'v': 'visual', 'V': 'visual', "\<C-v>": 'visual',
+    \    'c': 'command', 's': 'select', 'S': 'select', "\<C-s>": 'select', 't': 'terminal'
+    \  },
+    \  'mode_fallback': { 'replace': 'insert', 'terminal': 'insert', 'select': 'visual' },
+    \  'colorscheme': 'one'
+    \ }
+"}}}2
+"}}}1
+
+" colorscheme settings {{{1
+set background=dark
+if has('unix') && !(has('nvim') || s:is_wsl)
+    aug ModifyVimStyle
+        au!
+        au ColorScheme * hi CursorLine cterm=none
+        au ColorScheme * hi Normal  ctermbg=none
+        au ColorScheme * hi NonText ctermbg=none
+        au ColorScheme * hi LineNr  ctermbg=none
+        au ColorScheme * hi Folded  ctermbg=none
+        au ColorScheme * hi EndOfBuffer ctermfg=235 ctermbg=none
+        au ColorScheme * hi StatusLineNC cterm=Italic gui=Italic
+        au ColorScheme * hi Terminal ctermbg=none
+    aug END
+end
+if IsPlugged('onedark.vim')
+    let g:lightline.colorscheme = 'onedark'
+    let g:onedark#colors = onedark#GetColors()
+    let g:onedark#extend = {
+        \   'indent': { 'cterm16': '8', 'cterm': '59',  'gui': '#3D4149' },
+        \   'gray':   { 'cterm16': '0', 'cterm': '234', 'gui': '#21252B' },
+        \   'dark':   { 'cterm16': '0', 'cterm': '233', 'gui': '#17191c' }
+        \ }
+
+    aug OverrideOnedark
+        au!
+        au ColorScheme * call onedark#set_highlight('EndOfBuffer', {
+            \ 'fg': g:onedark#colors.black })
+        au ColorScheme * call onedark#set_highlight('Structure', {
+            \ 'fg': g:onedark#colors.purple })
+        au ColorScheme * call onedark#set_highlight('Operator', {
+            \ 'fg': g:onedark#colors.white })
+        au ColorScheme * call onedark#set_highlight('StorageClass', {
+            \ 'fg': g:onedark#colors.purple })
+        au ColorScheme * call onedark#set_highlight('Constant', {
+            \ 'fg': g:onedark#colors.dark_yellow })
+        au ColorScheme * call onedark#set_highlight('StatusLine', {
+            \ 'fg': g:onedark#colors.black,
+            \ 'bg': g:onedark#colors.green })
+        au ColorScheme * call onedark#set_highlight('StatusLineNC', {
+            \ 'fg': g:onedark#colors.white,
+            \ 'bg': g:onedark#extend.gray })
+        au ColorScheme * call onedark#set_highlight('StatusLineTerm', {
+            \ 'fg': g:onedark#colors.black,
+            \ 'bg': g:onedark#colors.cyan })
+        au ColorScheme * call onedark#set_highlight('StatusLineTermNC', {
+            \ 'fg': g:onedark#colors.white,
+            \ 'bg': g:onedark#extend.gray })
+        au ColorScheme * call onedark#set_highlight('TablineSel', {
+            \ 'bg': g:onedark#extend.gray })
+        au ColorScheme * call onedark#set_highlight('TablineFill', {
+            \ 'bg': g:onedark#extend.gray })
+        au ColorScheme * call onedark#set_highlight('Cursor', {
+            \ 'bg': g:onedark#colors.blue })
+        au ColorScheme * call onedark#set_highlight('Terminal', {
+            \ 'bg': g:onedark#extend.dark })
+        au ColorScheme * call onedark#set_highlight('fishKeyword', {
+            \ 'fg': g:onedark#colors.purple })
+        au ColorScheme * call onedark#set_highlight('luaBraces', {
+            \ 'fg': g:onedark#colors.white })
+        au ColorScheme * call onedark#set_highlight('luaFuncCall', {
+            \ 'fg': g:onedark#colors.blue })
+        au ColorScheme * call onedark#set_highlight('luaFuncKeyword', {
+            \ 'fg': g:onedark#colors.purple })
+        au ColorScheme * call onedark#set_highlight('luaLocal', {
+            \ 'fg': g:onedark#colors.purple })
+        au ColorScheme * call onedark#set_highlight('luaStringSpecial', {
+            \ 'fg': g:onedark#colors.cyan })
+        au ColorScheme * call onedark#set_highlight('luaSpecialTable', {
+            \ 'fg': g:onedark#colors.yellow })
+        au ColorScheme * call onedark#set_highlight('luaSpecialValue', {
+            \ 'fg': g:onedark#colors.purple })
+        au ColorScheme * call onedark#set_highlight('nimBuiltin', {
+            \ 'fg': g:onedark#colors.cyan })
+        au ColorScheme * call onedark#set_highlight('nimKeyword', {
+            \ 'fg': g:onedark#colors.purple })
+        au ColorScheme * call onedark#set_highlight('nimOperator', {
+            \ 'fg': g:onedark#colors.purple })
+        au ColorScheme * call onedark#set_highlight('rustAssert', {
+            \ 'fg': g:onedark#colors.cyan })
+        au ColorScheme * call onedark#set_highlight('rustAttribute', {
+            \ 'fg': g:onedark#colors.blue })
+        au ColorScheme * call onedark#set_highlight('rustIdentifier', {
+            \ 'fg': g:onedark#colors.yellow })
+        au ColorScheme * call onedark#set_highlight('rustKeyword', {
+            \ 'fg': g:onedark#colors.purple })
+        au ColorScheme * call onedark#set_highlight('rustMacro', {
+            \ 'fg': g:onedark#colors.cyan })
+        au ColorScheme * call onedark#set_highlight('rustModPath', {
+            \ 'fg': g:onedark#colors.white })
+        au ColorScheme * call onedark#set_highlight('rustStructure', {
+            \ 'fg': g:onedark#colors.purple })
+        au ColorScheme * call onedark#set_highlight('shQuote', {
+            \ 'fg': g:onedark#colors.green })
+        au ColorScheme * call onedark#set_highlight('ps1Keyword', {
+            \ 'fg': g:onedark#colors.purple })
+        au ColorScheme * call onedark#set_highlight('tomlTable', {
+            \ 'fg': g:onedark#colors.purple })
+        au ColorScheme * call onedark#set_highlight('tomlTableArray', {
+            \ 'fg': g:onedark#colors.purple })
+        au ColorScheme * call onedark#set_highlight('mkdURL', {
+            \ 'fg': g:onedark#colors.cyan })
+        au ColorScheme * call onedark#set_highlight('DeniteMatchedChar', {
+            \ 'fg': g:onedark#colors.red })
+        au ColorScheme * call onedark#set_highlight('DeniteSearch', {
+            \ 'bg': g:onedark#colors.comment_grey })
+        au ColorScheme * call onedark#set_highlight('FzfVimTop', {
+            \ 'fg': g:onedark#colors.black,
+            \ 'bg': g:onedark#colors.cyan })
+        au ColorScheme * call onedark#set_highlight('FzfVimBottom', {
+            \ 'fg': g:onedark#colors.black,
+            \ 'bg': g:onedark#colors.black })
+        au BufEnter call s:changeTermColor()
+    aug END
+
+    fun! s:changeTermColor()
+        if &ft == 'terminal'
+            let tf = ' ctermfg='.g:onedark#colors.black.cterm
+            let tb = ' ctermbg='.g:onedark#extend.cyan.cterm
+            let gf = ' guifg='.g:onedark#colors.black.gui
+            let gb = ' guibg='.g:onedark#extend.cyan.gui
+            exec ':hi StatusLineTerm'.tf.tb.gf.gg
+            if IsTTY()
+                let g:terminal_ansi_colors = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+                let g:terminal_color_0  = 0
+                let g:terminal_color_1  = 1
+                let g:terminal_color_2  = 2
+                let g:terminal_color_3  = 3
+                let g:terminal_color_4  = 4
+                let g:terminal_color_5  = 5
+                let g:terminal_color_6  = 6
+                let g:terminal_color_7  = 7
+                let g:terminal_color_8  = 8
+                let g:terminal_color_9  = 9
+                let g:terminal_color_10 = 10
+                let g:terminal_color_11 = 11
+                let g:terminal_color_12 = 12
+                let g:terminal_color_13 = 13
+                let g:terminal_color_14 = 14
+                let g:terminal_color_15 = 15
+                let g:terminal_color_background = 0
+                let g:terminal_color_foreground = 15
+            endif
+        endif
+    endfun
+
+    " for indentLine
+    let g:indentLine_color_term = g:onedark#extend.indent.cterm
+    let g:indentLine_color_gui  = g:onedark#extend.indent.gui
+    let g:indentLine_color_tty_light = g:onedark#extend.indent.cterm16
+    let g:indentLine_color_tty_dark  = g:onedark#extend.indent.cterm16
+
+    if IsPlugged('lightline.vim')
+        fun! s:fzf_statusline()
+            setlocal statusline=%#FzfVimTop#\ FZF\ %#FzfVimBottom#
+        endfun
+        au! User FzfStatusLine call <SID>fzf_statusline()
+    endif
+
+    color onedark
+
+endif
+"}}}1
+
+" settings for some terminal emulators {{{1
+if !IsGvim()
+    if &term == 'win32'
+    elseif &term == 'xterm-256color' || &term == 'screen-256color'
+        let &t_ti.="\e[0 q"
+        let &t_SI.="\e[5 q"
+        let &t_EI.="\e[1 q"
+        let &t_te.="\e[0 q"
+    elseif &term == 'linux'
+        let &t_Co=16
+    elseif s:is_android
+        let &t_ti.="\e[1 q"
+        let &t_SI.="\e[5 q"
+        let &t_EI.="\e[1 q"
+        let &t_te.="\e[0 q"
+    endif
+endif
+"}}}1
